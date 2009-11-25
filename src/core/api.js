@@ -77,6 +77,11 @@ FB.copy('', {
         old_cb && old_cb(response);
       };
     }
+    
+    if(window.isDemandWare) {
+      var client = FB.RestServer.demandware(params, cb);
+      return;
+    }
 
     try {
       FB.RestServer.jsonp(params, cb);
@@ -174,6 +179,73 @@ FB.copy('RestServer', {
     script.src = url;
     document.getElementsByTagName('head')[0].appendChild(script);
   },
+  
+  /**
+   * Make a API call to restserver.php using Demandware Server Side JS.
+   *
+   * @access private
+   * @param params {Object}   the parameters for the query
+   * @param cb     {Function} the callback function to handle the response
+   */
+  demandware: function(params, cb) {
+    var method, url, body, reqId;
+
+    // shallow clone of params, sign, and encode as query string
+    var bodyContent = FB.RestServer.sign(FB.copy({}, params));
+    body = FB.QS.encode(bodyContent);
+    url = FB._domain.api + 'restserver.php';
+
+    // GET or POST
+    var multipart = false;
+    if (url.length + body.length > 2000) {
+      method = 'POST';
+    } else {
+      method = 'GET';
+      url += '?' + body;
+      body = '';
+    }
+    if(params.multipart) {
+      method = 'POST';
+      body = "multi";
+    }
+    
+    try {
+      var client = dw.net.HTTPClient();
+      client.setTimeout(200 * 1000);
+      client.open(method, url);
+      if(body != '') {
+        if(params.multipart) {
+          delete params.multipart;
+          var parts = [];
+          for(var key in bodyContent) {
+            parts.push(new dw.net.HTTPRequestPart(key, bodyContent[key]))
+          }
+          client.sendMultiPart(parts)
+        } else {
+          client.send(body);
+        }
+      } else {
+        client.enableCaching(60 * 10)
+        client.send();
+      }
+      var message;
+      if(client.statusCode < 400) {
+        message = client.text;
+        cb(JSON.parse(message))
+      } else {
+        throw("An error occurred with status code "+client.statusCode)
+      }
+    } catch(e) {
+      if((e+"").match(/SocketTimeoutException/)) {
+        cb({
+          timeout: true
+        });
+        return;
+      }
+      throw e+"";
+    }
+  },
+  
 
   /**
    * Make a API call to restserver.php using Flash.

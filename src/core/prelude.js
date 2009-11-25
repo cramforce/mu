@@ -59,7 +59,7 @@
  * @static
  * @access private
  */
-if (!window.FB) {
+if (typeof FB === "undefined") {
   FB = {
     // use the init method to set these values correctly
     _apiKey     : null,

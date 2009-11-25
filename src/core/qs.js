@@ -43,13 +43,19 @@ FB.copy('QS', {
     var
       pairs = [],
       k;
-
+    
+    var keys = [];
     for (k in params) {
       if (params.hasOwnProperty(k) &&
           params[k] !== null &&
           typeof params[k] != 'undefined') {
-        pairs.push(encode(k) + '=' + encode(params[k]));
+        keys.push(k);
       }
+    }
+    keys = keys.sort();
+    for(var i = 0, len = keys.length; i < len; ++i) {
+      k = keys[i];
+      pairs.push(encode(k) + '=' + encode(params[k]));
     }
     pairs.sort();
     return pairs.join(sep);
